@@ -243,8 +243,7 @@ def main():
     config.deconv_info = dataset.get_deconv_info()
     dataset_train, dataset_test = dataset.create_default_splits()
 
-    trainer = Trainer(config,
-                      dataset_train, dataset_test)
+    trainer = Trainer(config, dataset_train, dataset_test)
 
     log.warning("dataset: %s, learning_rate: %f", config.dataset, config.learning_rate)
     trainer.train()

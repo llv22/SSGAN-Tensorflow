@@ -32,6 +32,21 @@ def conv2d(input, output_shape, is_train, k_h=5, k_w=5, stddev=0.02, name="conv2
 
 
 def deconv2d(input, deconv_info, is_train, name="deconv2d", stddev=0.02, activation_fn=None):
+    """[Devconvolution 2D layer]
+    
+    Arguments:
+        input {[Tensor]} -- [input tensor]
+        deconv_info {[np.array]} -- [array of deconvolution layer setting]
+        is_train {bool} -- [if it's in train or not]
+    
+    Keyword Arguments:
+        name {str} -- [default name of deconv2d layer] (default: {"deconv2d"})
+        stddev {float} -- [standard deviation of conv2d layer] (default: {0.02})
+        activation_fn {[type]} -- [activation function name] (default: {None})
+    
+    Returns:
+        [actionation_fn or conv2d layer] -- [last layer of tensorflow of deconvolution]
+    """
     with tf.variable_scope(name):
         output_shape = deconv_info[0]
         k = deconv_info[1]

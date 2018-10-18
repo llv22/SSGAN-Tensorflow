@@ -18,9 +18,7 @@ def prepare_h5py(train_image, train_label, test_image, test_label, data_dir, sha
     print('Preprocessing data...')
 
     import progressbar
-    bar = progressbar.ProgressBar(maxval=100,
-                                  widgets=[progressbar.Bar('=', '[', ']'), ' ',
-                                           progressbar.Percentage()])
+    bar = progressbar.ProgressBar(maxval=100, widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
 
     f = h5py.File(os.path.join(data_dir, 'data.hy'), 'w')
@@ -54,6 +52,9 @@ def check_file(data_dir):
     return False
 
 def download_mnist(download_path):
+    """
+    Download lecun's mnist into download_path.
+    """
     data_dir = os.path.join(download_path, 'mnist')
 
     if check_file(data_dir):
@@ -131,9 +132,14 @@ def download_cifar10(download_path):
 
     # cifar file loader
     def unpickle(file):
-        import cPickle
+        import sys
+        if sys.version_info.major == 3:
+            import pickle as cPickle
+        else:
+            import cPickle
         with open(file, 'rb') as fo:
-            dict = cPickle.load(fo)
+            # refer to https://github.com/tflearn/tflearn/issues/57
+            dict = cPickle.load(fo, encoding='latin1')
         return dict
 
     if check_file(data_dir):
