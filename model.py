@@ -8,6 +8,7 @@ import tensorflow.contrib.slim as slim
 
 from ops import conv2d, deconv2d, huber_loss
 from util import log
+import numpy as np
 
 
 class Model(object):
@@ -65,8 +66,23 @@ class Model(object):
 
         # build loss and accuracy {{{
         def build_loss(d_real, d_real_logits, d_fake, d_fake_logits, label, real_image, fake_image):
+            """[using model output to build loss]
+            
+            Arguments:
+                d_real {[Tensor]} -- [discrimintor loss for real image]
+                d_real_logits {[type]} -- [description]
+                d_fake {[type]} -- [discrimintor loss for fake image]
+                d_fake_logits {[type]} -- [description]
+                label {[type]} -- [description]
+                real_image {[type]} -- [description]
+                fake_image {[type]} -- [description]
+            
+            Returns:
+                [s_loss, d_loss_real, d_loss_fake, d_loss, g_loss, GAN_loss, accuracy] -- [returned parameter group]
+            """
             alpha = 0.9
             real_label = tf.concat([label, tf.zeros([self.batch_size, 1])], axis=1)
+            # directly put fake_label to n+1 class
             fake_label = tf.concat([(1-alpha)*tf.ones([self.batch_size, n])/n, alpha*tf.ones([self.batch_size, 1])], axis=1)
 
             # Discriminator/classifier loss
@@ -91,6 +107,17 @@ class Model(object):
 
         # G takes ramdon noise and tries to generate images [B, h, w, c]
         def G(z, scope='Generator'):
+            """[using prior distribution z to generator fake image]
+            
+            Arguments:
+                z {np.array} -- [numpy array for describe prior distribution]
+            
+            Keyword Arguments:
+                scope {str} -- [scope of generator] (default: {'Generator'})
+            
+            Returns:
+                [Tensor] -- [fake image]
+            """
             with tf.variable_scope(scope) as scope:
                 log.warn(scope.name)
                 z = tf.reshape(z, [self.batch_size, 1, 1, -1])
@@ -108,6 +135,18 @@ class Model(object):
 
         # D takes images as input and tries to output class label [B, n+1]
         def D(img, scope='Discriminator', reuse=True):
+            """[Discriminator for input images]
+            
+            Arguments:
+                img {np.array} -- [input image array]
+            
+            Keyword Arguments:
+                scope {str} -- [scope of discriminator] (default: {'Discriminator'})
+                reuse {bool} -- [if it's reused or not] (default: {True})
+            
+            Returns:
+                [tuple(float, float)] -- [softmax probablity, output logit]
+            """
             with tf.variable_scope(scope, reuse=reuse) as scope:
                 if not reuse: log.warn(scope.name)
                 d_1 = conv2d(img, conv_info[0], is_train, name='d_1_conv')
@@ -119,8 +158,11 @@ class Model(object):
                 d_3 = conv2d(d_2, conv_info[2], is_train, name='d_3_conv')
                 d_3 = slim.dropout(d_3, keep_prob=0.5, is_training=is_train, scope='d_3_conv/')
                 if not reuse: log.info('{} {}'.format(scope.name, d_3))
+                # issue : ValueError: num_outputs should be int or long, got 11., refer to https://github.com/gitlimlab/SSGAN-Tensorflow/issues/14
+                # solution: solved by changing model.py due to the fact that n+1 is numpy int32, whereas slim.fully_connected permits naive python int!!!
+                # further information: https://stackoverflow.com/questions/9452775/converting-numpy-dtypes-to-native-python-types
                 d_4 = slim.fully_connected(
-                    tf.reshape(d_3, [self.batch_size, -1]), n+1, scope='d_4_fc', activation_fn=None)
+                    tf.reshape(d_3, [self.batch_size, -1]), np.asscalar(n+1), scope='d_4_fc', activation_fn=None)
                 if not reuse: log.info('{} {}'.format(scope.name, d_4))
                 output = d_4
                 assert output.get_shape().as_list() == [self.batch_size, n+1]
